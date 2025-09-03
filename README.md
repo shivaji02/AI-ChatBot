@@ -1,4 +1,4 @@
-# Local Ollama + React (styled-components) Editor
+# Local Ollama + React Editor
 
 - Minimal deps: **react**, **styled-components**, **express**, **vite**
 - No Tailwind, no heavy editor libs — uses a clean `contenteditable` div
@@ -77,21 +77,3 @@ A simple web-based editor and chat interface powered by local Ollama AI models. 
 - Control flow and error handling are built-in for a robust user experience.
 
 ---
-
-## Deploy to Render (Node server)
-
-Use the included Express server (`server/server.mjs`) to serve the built client and handle `/api/ai` streaming.
-
-1) Create a new Web Service in Render, connect this repo.
-
-2) Environment Variables:
-   - `OLLAMA_URL` = reachable Ollama base URL (not localhost)
-   - `OLLAMA_MODEL` = optional default (e.g., `llama3.2`)
-
-3) Build & Start Commands:
-   - Build: `npm ci && npm run build`
-   - Start: `npm start`
-
-Notes:
-- The server listens on `process.env.PORT` (Render sets this).
-- Static files are served from `dist`, API at `/api/ai` proxies to `OLLAMA_URL` and streams results.
