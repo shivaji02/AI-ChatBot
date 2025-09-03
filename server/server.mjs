@@ -10,10 +10,19 @@ const PORT = process.env.PORT || 8787
 
 app.use(express.json({ limit: '1mb' }))
 
-// const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434'
-const OLLAMA_URL = "https://667f0b39e0b5.ngrok-free.app";
-
+// Upstream Ollama base URL (use env in production; default local for dev)
+const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434'
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2'
+
+function sanitizeErrorText(t) {
+  try {
+    if (!t) return 'Unknown error';
+    const noHtml = String(t).replace(/<[^>]*>/g, ' ');
+    return noHtml.replace(/\s+/g, ' ').trim().slice(0, 240);
+  } catch {
+    return 'Unknown error';
+  }
+}
 
 function buildActionPrompt(selection, action) {
   if (action === 'shorten') {
@@ -44,9 +53,26 @@ app.post('/api/ai', async (req, res) => {
 
     const modelToUse = typeof model === 'string' && model.length > 0 ? model : OLLAMA_MODEL;
 
-    const ollamaResp = await fetch(`${OLLAMA_URL}/api/generate`, {
+    const upstreamUrl = `${OLLAMA_URL}/api/generate`;
+
+    // Build headers with optional basic auth from OLLAMA_URL credentials
+    const upstreamHeaders = {
+      'content-type': 'application/json',
+      'accept': 'application/json',
+      'user-agent': 'ollama-chat-editor/1.0',
+      'ngrok-skip-browser-warning': 'true'
+    };
+    try {
+      const u = new URL(OLLAMA_URL);
+      if (u.username || u.password) {
+        const token = Buffer.from(`${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`).toString('base64');
+        upstreamHeaders['authorization'] = `Basic ${token}`;
+      }
+    } catch {}
+
+    const ollamaResp = await fetch(upstreamUrl, {
       method: 'POST',
-      headers: { 'content-type': 'application/json' },
+      headers: upstreamHeaders,
       body: JSON.stringify({
         model: modelToUse,
         prompt,
@@ -54,8 +80,9 @@ app.post('/api/ai', async (req, res) => {
       })
     });
     if (!ollamaResp.ok) {
-      const t = await ollamaResp.text();
-      throw new Error('Ollama error: ' + t);
+      const t = await ollamaResp.text().catch(() => '');
+      const clean = sanitizeErrorText(t);
+      throw new Error(`Upstream ${ollamaResp.status} ${ollamaResp.statusText} @ ${upstreamUrl} :: ${clean}`);
     }
 
     const reader = ollamaResp.body.getReader();
@@ -84,10 +111,35 @@ app.post('/api/ai', async (req, res) => {
     res.end();
   } catch (e) {
     // Safe fallback so UI remains usable even if Ollama is down.
+    const msg = e && e.message ? sanitizeErrorText(e.message) : 'No model available';
+    console.error('[API /api/ai] Error:', e);
     try {
-      res.write(`data: [Mock AI] ${e?.message || 'No model available'}\n\n`);
+      res.write(`data: [Error] ${msg}\n\n`);
     } catch {}
     try { res.end(); } catch {}
+  }
+});
+
+// Simple upstream connectivity check (useful on Render)
+app.get('/api/ai-ping', async (req, res) => {
+  try {
+    const headers = {
+      'accept': 'application/json',
+      'user-agent': 'ollama-chat-editor/1.0',
+      'ngrok-skip-browser-warning': 'true'
+    };
+    try {
+      const u = new URL(OLLAMA_URL);
+      if (u.username || u.password) {
+        const token = Buffer.from(`${decodeURIComponent(u.username)}:${decodeURIComponent(u.password)}`).toString('base64');
+        headers['authorization'] = `Basic ${token}`;
+      }
+    } catch {}
+    const r = await fetch(`${OLLAMA_URL}/api/tags`, { method: 'GET', headers });
+    const text = await r.text();
+    res.json({ ok: r.ok, status: r.status, length: text.length, preview: text.slice(0, 200) });
+  } catch (e) {
+    res.status(500).json({ ok: false, error: e?.message || String(e) });
   }
 });
 
