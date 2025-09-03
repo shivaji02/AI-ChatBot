@@ -13,7 +13,7 @@ app.use(express.json({ limit: '1mb' }))
 // Upstream Ollama base URL (use env in production; default local for dev)
 // const OLLAMA_URL = 'https://f769b932c933.ngrok-free.app'
 
-OLLAMA_URL="https://installed-harmful-discipline-raymond.trycloudflare.com"
+const OLLAMA_URL="https://installed-harmful-discipline-raymond.trycloudflare.com"
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2'
 
