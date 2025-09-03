@@ -13,7 +13,8 @@ app.use(express.json({ limit: '1mb' }))
 // Upstream Ollama base URL (use env in production; default local for dev)
 // const OLLAMA_URL = 'https://f769b932c933.ngrok-free.app'
 
-const OLLAMA_URL="https://receipt-priority-german-update.trycloudflare.com"
+// Updated Ollama URL to use the Cloudflare tunnel
+const OLLAMA_URL = 'https://bulk-solaris-terrace-type.trycloudflare.com';
 
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2'
 
