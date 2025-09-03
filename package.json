@@ -1,5 +1,5 @@
 {
-  "name": "ollama-Chat-Editor",
+  "name": "ollama-chat-editor",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -7,12 +7,12 @@
     "node": ">=18.18.0"
   },
   "scripts": {
-    "dev:server": "node server/server.mjs",
+    "dev:server": "node server/server.js",
     "dev:client": "vite",
-    "dev": "node server/server.mjs & vite",
+    "dev": "node server/server.js & vite",
     "llm": "OLLAMA_HOST=127.0.0.1:11434 ollama serve",
     "build": "vite build",
-    "start": "NODE_ENV=production node server/server.mjs"
+    "start": "NODE_ENV=production node server/server.js"
   },
   "dependencies": {
     "express": "^4.19.2",

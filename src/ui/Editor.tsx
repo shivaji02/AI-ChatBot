@@ -147,7 +147,7 @@ const Editor = forwardRef<any, EditorProps>(function Editor({ onOpenPreview, mod
 		return (
 			<>
 				<Header>
-					<span>Live Editor</span>
+					<span>Live Editor (local Ollama)</span>
 					{modelSelector && <span style={{ float: 'right' }}>{modelSelector}</span>}
 				</Header>
 				<Holder ref={containerRef}>
@@ -200,64 +200,134 @@ const Bar = styled.div`
 	transition: box-shadow 0.2s;
 `;
 const Btn = styled.button`
-	padding: 1px 5px;
-	border-radius: 8px;
+	padding: 8px 16px;
+	border-radius: 12px;
 	cursor: pointer;
-	font-weight: 200;
+	font-weight: 600;
 	letter-spacing: 0.5px;
-	font-size: 15px;
+	font-size: 13px;
 	border: none;
-	// background: linear-gradient(90deg, #0c494fff 30%, #202a42ff 100%);
-	color: #b9c5cbff;
-	// padding: 10px 28px;
-	border-radius: "14px";
-	cursor: pointer;
-	letter-spacing: 0.7px;
-	box-shadow: "0 2px 12px rgba(0,238,255,0.10)";
-	transition: background 0.2s, color 0.2s;
+	background: linear-gradient(135deg, rgba(67, 206, 162, 0.9) 0%, rgba(0, 234, 255, 0.9) 100%);
+	color: #fff;
+	box-shadow: 0 4px 15px rgba(0, 234, 255, 0.2);
+	transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 	outline: none;
-	border-bottom: "2.5px solid #43cea2";
-	border-top: "1.5px solid #00eaff";
-	opacity: 0.95;
-	backdrop-filter: blur(2px);
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	position: relative;
+	overflow: hidden;
+	
 	&:hover {
-		background: linear-gradient(90deg, #43cea2 0%, #00eaff 100%);
-		color: #111827;
-		opacity: 1;
+		transform: translateY(-2px) scale(1.02);
+		box-shadow: 0 8px 25px rgba(0, 234, 255, 0.3);
+		background: linear-gradient(135deg, rgba(67, 206, 162, 1) 0%, rgba(0, 234, 255, 1) 100%);
+	}
+	
+	&:active {
+		transform: translateY(0) scale(0.98);
+	}
+	
+	&::before {
+		content: '';
+		position: absolute;
+		top: 0;
+		left: 0;
+		right: 0;
+		bottom: 0;
+		background: linear-gradient(45deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+		transform: translateX(-100%);
+		transition: transform 0.6s;
+	}
+	
+	&:hover::before {
+		transform: translateX(100%);
 	}
 `;
 
 const Header = styled.div`
-	padding: 12px 16px;
-	width: 100%;
-	height: 50px;
+	padding: 16px 20px;
+	border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 	font-weight: 700;
-	font-size: 18px;
-  background: linear-gradient(90deg, #414345 0%, #72adcbff 100%);
-	letter-spacing: 1px;
+	font-size: 20px;
+	background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+	color: #fff;
+	letter-spacing: 0.5px;
+	display: flex;
+	align-items: center;
+	justify-content: space-between;
+	backdrop-filter: blur(20px);
+	text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+	position: relative;
+	
+	&::before {
+		content: '✨';
+		position: absolute;
+		left: 20px;
+		top: 50%;
+		transform: translateY(-50%);
+		font-size: 22px;
+	}
+	
+	& > span:first-child {
+		margin-left: 40px;
+	}
 `;
+
 const Holder = styled.div`
-	padding: 16px;
+	padding: 20px;
 	flex: 1;
 	min-height: 0;
 	overflow: auto;
 	position: relative;
-	background: linear-gradient(120deg, #8e2de2 0%, #4a00e0 100%);
+	background: linear-gradient(135deg, rgba(142, 45, 226, 0.1) 0%, rgba(74, 0, 224, 0.1) 100%);
 	display: flex;
 	flex-direction: column;
+	backdrop-filter: blur(10px);
 `;
+
 const Paper = styled.div`
-	background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
-	border: 1px solid #133235ff;
-	border-radius: 18px;
+	background: rgba(255, 255, 255, 0.95);
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	border-radius: 16px;
 	padding: 24px;
-	min-height: 120px;
-	max-height: 100%;s
+	min-height: 300px;
+	max-height: 100%;
 	outline: none;
 	overflow-y: auto;
 	word-break: break-word;
-	font-size: 17px;
-	color: #232526;
-	box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+	font-size: 16px;
+	line-height: 1.6;
+	color: #1a1a1a;
+	box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+	backdrop-filter: blur(20px);
+	transition: all 0.2s ease;
+	
+	&:hover {
+		box-shadow: 0 15px 50px rgba(0, 0, 0, 0.15);
+		transform: translateY(-2px);
+	}
+	
+	&:focus {
+		border-color: rgba(0, 245, 255, 0.4);
+		box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1), 0 15px 50px rgba(0, 0, 0, 0.15);
+	}
+	
+	&::-webkit-scrollbar {
+		width: 6px;
+	}
+	
+	&::-webkit-scrollbar-track {
+		background: rgba(0, 0, 0, 0.05);
+		border-radius: 3px;
+	}
+	
+	&::-webkit-scrollbar-thumb {
+		background: rgba(0, 0, 0, 0.2);
+		border-radius: 3px;
+		
+		&:hover {
+			background: rgba(0, 0, 0, 0.3);
+		}
+	}
 `;
 

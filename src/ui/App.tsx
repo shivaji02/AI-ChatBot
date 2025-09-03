@@ -28,7 +28,7 @@ export default function App() {
 						onOpenPreview={(original, suggestion, applyFn) => setPreview({ open: true, original, suggestion, apply: applyFn })}
 						modelSelector={
 							<ModelSelector>
-								<ModelLabel>LLM Variant:</ModelLabel>
+								<ModelLabel>Ollama Model:</ModelLabel>
 								<ModelSelect value={model} onChange={e => setModel(e.target.value)}>
 									{models.map(m => <option key={m.name} value={m.name}>{m.label}</option>)}
 								</ModelSelect>
@@ -67,44 +67,82 @@ const GlobalStyle = createGlobalStyle`
 	:root { color-scheme: light dark; }
 	* { box-sizing: border-box; }
 	html, body, #root { height: 100%; margin: 0; }
-	body { font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, Apple Color Emoji, Segoe UI Emoji; }
+	body { 
+		font-family: 'SF Pro Display', -apple-system, BlinkMacSystemFont, ui-sans-serif, system-ui, Segoe UI, Roboto, Helvetica, Arial, sans-serif; 
+		background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+		overflow: hidden;
+	}
 `;
 
 const SplitPane = styled.div`
-	height: 100%;
+	height: 100vh;
 	display: flex;
 	width: 100%;
+	backdrop-filter: blur(20px);
+	background: rgba(255, 255, 255, 0.05);
+	border-radius: 20px;
+	margin: 10px;
+	box-shadow: 0 25px 45px rgba(0, 0, 0, 0.1);
+	border: 1px solid rgba(255, 255, 255, 0.1);
+	overflow: hidden;
 `;
+
 const Pane = styled.div<{ $right?: boolean }>`
 	height: 100%;
 	display: flex;
 	flex-direction: column;
 	flex: ${p => p.$right ? '0 0 var(--chat-width,320px)' : '1 1 0%'};
-	border-left: ${p => p.$right ? '1px solid #193136ff' : 'none'};
+	border-left: ${p => p.$right ? '1px solid rgba(255, 255, 255, 0.1)' : 'none'};
 	min-width: 120px;
-	transition: flex-basis 0.2s;
+	transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+	backdrop-filter: blur(10px);
 `;
 
 const ModelSelector = styled.span`
 	margin-left: 16px;
 	display: flex;
 	align-items: center;
-	width: 100%;
+	background: rgba(255, 255, 255, 0.1);
+	padding: 8px 12px;
+	border-radius: 12px;
+	backdrop-filter: blur(10px);
+	border: 1px solid rgba(255, 255, 255, 0.2);
 `;
 
 const ModelLabel = styled.span`
-	font-weight: 500;
-	color: #1c3a3cff;
+	font-weight: 600;
+	color: #00f5ff;
 	margin-right: 8px;
+	text-shadow: 0 0 10px rgba(0, 245, 255, 0.3);
 `;
 
 const ModelSelect = styled.select`
-	font-size: 15px;
-	padding: 2px 10px;
-	border-radius: 8px;
-	height: 30px;
-	background: linear-gradient(90deg, #43cea2 0%, #1d2f31ff 100%);
-
+	font-size: 14px;
+	padding: 6px 12px;
+	border-radius: 10px;
+	border: 1px solid rgba(255, 255, 255, 0.2);
+	background: rgba(255, 255, 255, 0.1);
+	color: #fff;
+	backdrop-filter: blur(10px);
+	font-weight: 500;
+	cursor: pointer;
+	transition: all 0.2s ease;
+	
+	&:hover {
+		background: rgba(255, 255, 255, 0.2);
+		transform: translateY(-1px);
+	}
+	
+	&:focus {
+		outline: none;
+		box-shadow: 0 0 0 2px rgba(0, 245, 255, 0.4);
+	}
+	
+	option {
+		background: #2a2a3a;
+		color: #fff;
+		padding: 8px;
+	}
 `;
 
 
