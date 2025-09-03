@@ -7,7 +7,7 @@
     "dev:server": "node server/server.mjs",
     "dev:client": "vite",
     "dev": "node server/server.mjs & vite",
-    "llm":"ollama serve --model llama2 --port 11434",
+    "llm": "OLLAMA_HOST=127.0.0.1:11434 ollama serve",
     "build": "vite build",
     "start": "NODE_ENV=production node server/server.mjs"
   },

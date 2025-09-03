@@ -14,5 +14,5 @@
     "noEmit": true,
     "lib": ["DOM", "ESNext"]
   },
-  "include": ["src"]
+  "include": ["client", "server"]
 }

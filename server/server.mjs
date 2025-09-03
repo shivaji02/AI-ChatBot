@@ -10,7 +10,9 @@ const PORT = process.env.PORT || 8787
 
 app.use(express.json({ limit: '1mb' }))
 
-const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434'
+// const OLLAMA_URL = process.env.OLLAMA_URL || 'http://127.0.0.1:11434'
+const OLLAMA_URL = process.env.OLLAMA_URL || "https://667f0b39e0b5.ngrok-free.app";
+
 const OLLAMA_MODEL = process.env.OLLAMA_MODEL || 'llama3.2'
 
 function buildActionPrompt(selection, action) {
@@ -27,6 +29,13 @@ function buildActionPrompt(selection, action) {
 }
 
 app.post('/api/ai', async (req, res) => {
+  // Always establish SSE so clients consistently stream, even on errors.
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache');
+  res.setHeader('Connection', 'keep-alive');
+  if (typeof res.flushHeaders === 'function') {
+    res.flushHeaders();
+  }
   try {
     const { message, doc, selection, action, model } = req.body || {};
     const prompt = selection
@@ -48,10 +57,6 @@ app.post('/api/ai', async (req, res) => {
       const t = await ollamaResp.text();
       throw new Error('Ollama error: ' + t);
     }
-    res.setHeader('Content-Type', 'text/event-stream');
-    res.setHeader('Cache-Control', 'no-cache');
-    res.setHeader('Connection', 'keep-alive');
-    res.flushHeaders();
 
     const reader = ollamaResp.body.getReader();
     let decoder = new TextDecoder();
@@ -79,8 +84,10 @@ app.post('/api/ai', async (req, res) => {
     res.end();
   } catch (e) {
     // Safe fallback so UI remains usable even if Ollama is down.
-    res.write(`data: [Mock AI] ${e.message || 'No model available'}\n\n`);
-    res.end();
+    try {
+      res.write(`data: [Mock AI] ${e?.message || 'No model available'}\n\n`);
+    } catch {}
+    try { res.end(); } catch {}
   }
 });
 

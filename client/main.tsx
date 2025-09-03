@@ -9,3 +9,4 @@ if (rootEl) {
 } else {
   throw new Error("Root element not found");
 }
+;
