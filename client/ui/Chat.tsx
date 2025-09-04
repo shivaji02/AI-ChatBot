@@ -1,14 +1,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { fetchAI } from '../clientCalls';
+import { generateChatResponse } from '../utils/aiGeneration';
+import { cleanAndFormatText, formatStreamingText, sanitizeText } from '../utils/textActions';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 type ChatProps = { getDoc: () => string; applyToEditor: (text: string) => void; model: string };
 type Status = 'idle' | 'streaming';
-
-function stripThinkBlocks(text: string) {
-  return text.replace(/<think>[\s\S]*?<\/think>/gi, '').trim();
-}
 
 export default function Chat({ getDoc, applyToEditor, model }: ChatProps) {
   const [messages, setMessages] = useState<Message[]>([]);
@@ -23,6 +20,21 @@ export default function Chat({ getDoc, applyToEditor, model }: ChatProps) {
 
   useEffect(() => { const el = listRef.current; if (el) el.scrollTop = el.scrollHeight; }, [messages, status]);
   useEffect(() => { statusRef.current = status; }, [status]);
+
+  // Insert a space at chunk boundaries when the previous char and the
+  // first char of the new chunk are both alphanumerics and no whitespace
+  // is present. This fixes models that stream tokens without leading spaces.
+  const smartAppend = useCallback((prev: string, next: string) => {
+    if (!next) return prev;
+    if (!prev) return next;
+    const last = prev.charAt(prev.length - 1);
+    const first = next.charAt(0);
+    const isAlphaNum = (c: string) => /[A-Za-z0-9]/.test(c);
+    if (/\s/.test(last) || /\s/.test(first)) return prev + next;
+    if (/[.,!?;:\)\]\}]/.test(first)) return prev + next;
+    if (isAlphaNum(last) && isAlphaNum(first)) return prev + ' ' + next;
+    return prev + next;
+  }, []);
 
   const updateLastAssistant = useCallback((newContent: string) => {
     setMessages(prev => {
@@ -59,18 +71,24 @@ export default function Chat({ getDoc, applyToEditor, model }: ChatProps) {
     setStatus('streaming');
 
     try {
-      await fetchAI({
-        message: content,
-        doc: getDoc(),
+      await generateChatResponse(
+        content,
         model,
-        onStream: (chunk: string) => {
+        getDoc(),
+        (chunk: string) => {
           if (statusRef.current !== 'streaming') return;    // paused/aborted protection
-          bufferRef.current += chunk;
-          updateLastAssistant(stripThinkBlocks(bufferRef.current));
+          bufferRef.current = smartAppend(bufferRef.current, chunk);
+          updateLastAssistant(formatStreamingText(bufferRef.current));
+        },
+        (error: Error) => {
+          if (statusRef.current === 'streaming') {
+            updateLastAssistant('Error: ' + error.message);
+          }
         }
-      });
+      );
 
       if (!bufferRef.current) updateLastAssistant('[No response]');
+      else updateLastAssistant(cleanAndFormatText(bufferRef.current));
     } catch (e: any) {
       // if aborted, keep silent; otherwise show error
       if (statusRef.current === 'streaming') {
@@ -102,7 +120,7 @@ export default function Chat({ getDoc, applyToEditor, model }: ChatProps) {
               </Msg>
             );
           }
-          const cleaned = stripThinkBlocks(m.content);
+          const cleaned = sanitizeText(m.content);
           const isDup = m.role === 'assistant' && cleaned && isDupInEditor(cleaned);
 
           return (
@@ -184,14 +202,26 @@ const Head = styled.div`
   background: linear-gradient(90deg, #72adcbff 0%, #414345 100%);
 `;
 const List = styled.div`
-  flex: 1; overflow: auto; padding: 12px; display: flex; flex-direction: column; gap: 10px;  background: linear-gradient(90deg, #221d10ff 0%, #5f2d72ff 100%);
+  flex: 1; 
+  overflow: auto; 
+  padding: 12px; 
+  display: flex; 
+  flex-direction: column; 
+  gap: 10px;  
+  background: linear-gradient(135deg, #459abfff 0%, #e0e7ff 100%);
+  backdrop-filter: blur(4px);
+  box-shadow: 0 4px 24px rgba(60, 60, 120, 0.08);
 `;
 const Msg = styled.div<{ role: string }>`
-  border: 1px solid #e5e7eb; border-radius: 12px; padding: 10px;
+  border-radius: 12px; padding: 12px 14px;
   background: ${p => p.role === 'user'
-    ? 'linear-gradient(90deg, #a7ffeb 0%, #64b5f6 100%)'
-    : 'linear-gradient(90deg, #ffe082 0%, #ff8a65 100%)'};
-  color: #222; white-space: pre-wrap; word-break: break-word;
+    ? 'linear-gradient(90deg, #a7b2d5ff 0%, #9f8daaff 100%)'
+    : 'linear-gradient(90deg, #ffe082 0%, #b5c9c5ff 100%)'};
+  color: #222;
+  white-space: pre-wrap;          /* preserve spaces and newlines */
+  word-break: break-word;         /* prevent overflow */
+  overflow-wrap: anywhere;        /* allow breaking long tokens */
+  line-height: 1.4;
   align-self: ${p => (p.role === 'user' ? 'flex-end' : 'flex-start')};
   max-width: 80%; min-width: 120px; box-shadow: 0 2px 8px rgba(0,0,0,0.08);
 `;
@@ -243,5 +273,3 @@ const Dots = styled.span`
   & > span { animation: ${blink} 1.2s infinite; opacity: .3; margin-right: 2px; }
   & > span:nth-child(2){animation-delay:.4s} & > span:nth-child(3){animation-delay:.8s}
 `;
-
-

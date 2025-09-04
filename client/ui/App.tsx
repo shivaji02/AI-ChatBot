@@ -12,7 +12,7 @@ const models = [
 
 export default function App() {
 	const editorRef = useRef<any>(null);
-	const [preview, setPreview] = useState<{ open: boolean; original: string; suggestion: string; apply: () => void }>({ open: false, original: '', suggestion: '', apply: () => {} });
+	const [preview, setPreview] = useState<{ open: boolean; original: string; suggestion: string; apply: () => void; loading?: boolean }>({ open: false, original: '', suggestion: '', apply: () => {}, loading: false });
 	const [model, setModel] = useState<string>(models[0].name);
 	// Fixed chat width
 	const chatWidth = 320;
@@ -25,7 +25,7 @@ export default function App() {
 					<Editor
 						ref={editorRef}
 						model={model}
-						onOpenPreview={(original, suggestion, applyFn) => setPreview({ open: true, original, suggestion, apply: applyFn })}
+						onOpenPreview={(original, suggestion, applyFn, opts) => setPreview({ open: true, original, suggestion, apply: applyFn, loading: opts?.loading })}
 						modelSelector={
 							<ModelSelector>
 								<ModelLabel>LLM Variant:</ModelLabel>
@@ -45,24 +45,24 @@ export default function App() {
 					/>
 				</Pane>
 			</SplitPane>
-			<PreviewModal
-				open={preview.open}
-				original={preview.original}
-				suggestion={preview.suggestion}
-				onCancel={() => setPreview(p => ({ ...p, open: false }))}
-				onConfirm={async () => {
-					// Always send suggestion to editor block
-					if (editorRef.current) {
-						editorRef.current.insertAtCursor(preview.suggestion);
-					}
-					setPreview(p => ({ ...p, open: false }));
-				}}
-			/>
+				<PreviewModal
+					open={preview.open}
+					original={preview.original}
+					suggestion={preview.suggestion}
+					loading={!!preview.loading}
+					onCancel={() => setPreview(p => ({ ...p, open: false }))}
+					onConfirm={async () => {
+						// Always send suggestion to editor block
+						if (editorRef.current) {
+							editorRef.current.insertAtCursor(preview.suggestion);
+						}
+						setPreview(p => ({ ...p, open: false }));
+					}}
+				/>
 		</>
 	);
 }
 
-// --- Styles ---
 const GlobalStyle = createGlobalStyle`
 	:root { color-scheme: light dark; }
 	* { box-sizing: border-box; }
@@ -80,7 +80,7 @@ const Pane = styled.div<{ $right?: boolean }>`
 	display: flex;
 	flex-direction: column;
 	flex: ${p => p.$right ? '0 0 var(--chat-width,320px)' : '1 1 0%'};
-	border-left: ${p => p.$right ? '1px solid #193136ff' : 'none'};
+	border-left: ${p => p.$right ? '1px solid #6c7274ff' : 'red'};
 	min-width: 120px;
 	transition: flex-basis 0.2s;
 `;
@@ -107,6 +107,4 @@ const ModelSelect = styled.select`
 
 `;
 
-
-// Styled-components moved to the bottom
 

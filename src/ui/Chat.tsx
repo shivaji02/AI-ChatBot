@@ -1,6 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import styled, { keyframes } from 'styled-components';
-import { fetchAI } from '../clientCalls';
+import {fetchAI} from '../clientCalls';
 
 type Message = { role: 'user' | 'assistant'; content: string };
 type ChatProps = { getDoc: () => string; applyToEditor: (text: string) => void; model: string };
@@ -279,11 +279,6 @@ const FooterBar = styled.div`
   border-top: 1px solid rgba(255, 255, 255, 0.1);  
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
   backdrop-filter: blur(20px);
-  
-  @media (max-width: 480px) {
-    padding: 12px 16px;
-    gap: 8px;
-  }
 `;
 
 const PromptInput = styled.textarea`
@@ -292,7 +287,7 @@ const PromptInput = styled.textarea`
   max-height: 120px; 
   padding: 12px 16px; 
   border-radius: 21px;
-  border: 1px solid rgba(255, 255, 255, 0.2); 
+  //border: 1px solid rgba(255, 255, 255, 0.2); 
   resize: none; 
   outline: none; 
   font-size: 14px; 
@@ -302,23 +297,18 @@ const PromptInput = styled.textarea`
   backdrop-filter: blur(10px);
   transition: all 0.2s ease;
   font-family: inherit;
-  word-wrap: break-word;
-  overflow-wrap: break-word;
   
   &::placeholder {
     color: rgba(26, 26, 26, 0.5);
   }
   
   &:focus {
-    border-color: rgba(0, 245, 255, 0.4);
-    box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1);
+   // box-shadow: 0 0 0 3px rgba(0, 245, 255, 0.1);
     background: rgba(255, 255, 255, 0.95);
   }
   
-  @media (max-width: 480px) {
-    font-size: 13px;
-    padding: 10px 14px;
-    min-height: 38px;
+  &:hover {
+    border-color: rgba(255, 255, 255, 0.3);
   }
 `;
 

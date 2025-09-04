@@ -1,11 +1,10 @@
 import React, { forwardRef, useEffect, useImperativeHandle, useRef, useState } from 'react';
-import { fetchAI } from '../clientCalls';
-import { stripThinkBlocks, stripHtmlTags } from '../utils/textActions';
+import { generateTextSuggestion } from '../utils/aiGeneration';
 import styled from 'styled-components';
 type EditorProps = {
-	onOpenPreview: (original: string, suggestion: string, applyFn: () => void) => void;
-	model: string;
-	modelSelector?: React.ReactNode;
+    onOpenPreview: (original: string, suggestion: string, applyFn: () => void, opts?: { loading?: boolean }) => void;
+    model: string;
+    modelSelector?: React.ReactNode;
 };
 
 function useSelectionIn(elRef: React.RefObject<HTMLDivElement | null>) {
@@ -35,41 +34,14 @@ function useSelectionIn(elRef: React.RefObject<HTMLDivElement | null>) {
 	return { rect, text };
 }
 
-async function callAI({ selection, action, model }: { selection: string; action: string; model: string }) {
-	// Use fetchAI from clientCalls for consistency and streaming support
-	// Import at top: import { fetchAI } from '../clientCalls';
-	let fullText = '';
-	await fetchAI({
-		selection,
-		action,
-		model,
-		onStream: (chunk: string) => {
-			fullText += chunk;
-		}
-	});
-	let text = fullText.replace(/\*\*/g, '').trim();
-	if (action === 'table') {
-		text = text
-			.split('\n')
-			.map((line: string) => line.replace(/\s*\|\s*/g, ' | ').trim())
-			.filter((line: string) => line.length > 0)
-			.join('\n');
-	}
-	if (action === 'shorten' || action === 'lengthen') {
-		text = text.replace(/\n+/g, ' ').replace(/\s+/g, ' ').trim();
-	}
-	// Format code blocks for readability
-	text = text.replace(/```([\s\S]*?)```/g, (match, code) => {
-		return '\n' + code.trim().split('\n').map((line: string) => '    ' + line).join('\n') + '\n';
-	});
-	return text;
-}
+// no-op helper removed; we call generateTextSuggestion directly
 
 const Editor = forwardRef<any, EditorProps>(function Editor({ onOpenPreview, model, modelSelector }, ref) {
-	const containerRef = useRef<HTMLDivElement | null>(null);
-	const editorRef = useRef<HTMLDivElement | null>(null);
-	const lastRangeRef = useRef<Range | null>(null);
-	const { rect, text } = useSelectionIn(editorRef);
+    const containerRef = useRef<HTMLDivElement | null>(null);
+    const editorRef = useRef<HTMLDivElement | null>(null);
+    const lastRangeRef = useRef<Range | null>(null);
+    const latestSuggestionRef = useRef<string>('');
+    const { rect, text } = useSelectionIn(editorRef);
 
 	useEffect(() => {
 		function storeRange() {
@@ -114,35 +86,54 @@ const Editor = forwardRef<any, EditorProps>(function Editor({ onOpenPreview, mod
 
 	const openAction = async (action: string) => {
 		if (!text) return;
-		const suggestion = await callAI({ selection: text, action, model });
-		const applyFn = () => {
-			let formatted = suggestion.replace(/\*\*/g, '');
-			formatted = formatted.replace(/```([\s\S]*?)```/g, (match, code) => {
-				return '\n' + code.trim().split('\n').map((line: string) => '    ' + line).join('\n') + '\n';
-			});
-			// Remove duplicate lines from editor
-			const el = editorRef.current;
-			if (!el) return;
-			const currentText = el.innerText;
-			const formattedLines = formatted.split('\n').map(l => l.trim()).filter(l => l.length > 0);
-			const currentLines = currentText.split('\n').map(l => l.trim());
-			const uniqueLines = formattedLines.filter(line => !currentLines.includes(line));
-			const resultText = uniqueLines.join('\n');
-			el.innerText = resultText;
-			// If selection exists, try to replace selection as well (for best UX)
-			if (lastRangeRef.current) {
-				const sel = window.getSelection();
+		// Provide full document context to improve editing quality
+    const fullDoc = editorRef.current?.innerText || '';
+        // Open preview immediately with a loading state
+        const applyFn = () => {
+            const el = editorRef.current;
+            if (!el) return;
+            // Suggestion already formatted by generator
+            let formatted = (latestSuggestionRef.current || '').trim();
+
+            el.focus();
+            const sel = window.getSelection();
+            // Replace the previously selected range if we have it
+            if (lastRangeRef.current) {
+				const r = lastRangeRef.current;
 				sel?.removeAllRanges();
-				sel?.addRange(lastRangeRef.current);
-				const r = window.getSelection()?.getRangeAt(0) || lastRangeRef.current;
-				if (r) {
-					r.deleteContents();
-					r.insertNode(document.createTextNode(resultText));
-				}
-			}
-		};
-		onOpenPreview(text, suggestion, applyFn);
-	};
+				sel?.addRange(r);
+				r.deleteContents();
+				r.insertNode(document.createTextNode(formatted));
+				// Move caret to end of inserted text
+				r.collapse(false);
+				sel?.removeAllRanges();
+				sel?.addRange(r);
+			} else if (sel && sel.rangeCount && el.contains(sel.anchorNode)) {
+				// Fallback: replace current selection/caret
+				const r = sel.getRangeAt(0);
+				r.deleteContents();
+				r.insertNode(document.createTextNode(formatted));
+				r.collapse(false);
+				sel.removeAllRanges();
+				sel.addRange(r);
+			} else {
+				// Append at end if we can't find a valid selection
+				el.appendChild(document.createTextNode('\n' + formatted));
+				el.scrollIntoView({ behavior: 'smooth', block: 'end' });
+            }
+        };
+        onOpenPreview(text, 'Generating…', applyFn, { loading: true });
+
+        // Generate suggestion and then update modal contents by calling onOpenPreview again
+        try {
+            const suggestion = await generateTextSuggestion(text, action, model, fullDoc);
+            latestSuggestionRef.current = suggestion.trim();
+            onOpenPreview(text, latestSuggestionRef.current, applyFn, { loading: false });
+        } catch (e) {
+            latestSuggestionRef.current = 'Error generating suggestion.';
+            onOpenPreview(text, latestSuggestionRef.current, applyFn, { loading: false });
+        }
+    };
 
 		return (
 			<>
@@ -233,7 +224,7 @@ const Header = styled.div`
 	height: 50px;
 	font-weight: 700;
 	font-size: 18px;
-  background: linear-gradient(90deg, #414345 0%, #72adcbff 100%);
+  	background: linear-gradient(90deg, #414345 0%, #72adcbff 100%);
 	letter-spacing: 1px;
 `;
 const Holder = styled.div`
@@ -242,22 +233,22 @@ const Holder = styled.div`
 	min-height: 0;
 	overflow: auto;
 	position: relative;
-	background: linear-gradient(120deg, #8e2de2 0%, #4a00e0 100%);
+	background: linear-gradient(120deg,  #18383dff 0%, #123d46ff 100%);
 	display: flex;
 	flex-direction: column;
 `;
 const Paper = styled.div`
-	background: linear-gradient(120deg, #f6d365 0%, #fda085 100%);
-	border: 1px solid #133235ff;
-	border-radius: 18px;
-	padding: 24px;
-	min-height: 120px;
-	max-height: 100%;s
-	outline: none;
-	overflow-y: auto;
-	word-break: break-word;
-	font-size: 17px;
-	color: #232526;
-	box-shadow: 0 4px 24px rgba(0,0,0,0.10);
+    background: linear-gradient(120deg,   #e6e4eada 100%);
+    // border: 1px solid #133235ff;
+    border-radius: 18px;
+    padding: 24px;
+    min-height: 120px;
+    max-height: 100%;s
+    outline: none;
+    overflow-y: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+    font-size: 17px;
+    color: #232526;
 `;
-

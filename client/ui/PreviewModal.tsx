@@ -12,9 +12,10 @@ interface PreviewModalProps {
   suggestion: string;
   onCancel: () => void;
   onConfirm: () => Promise<void>;
+  loading?: boolean;
 }
 
-export default function PreviewModal({ open, original, suggestion, onCancel, onConfirm }: PreviewModalProps) {
+export default function PreviewModal({ open, original, suggestion, onCancel, onConfirm, loading }: PreviewModalProps) {
   const [performing, setPerforming] = useState(false)
   if (!open) return null
   return (
@@ -28,7 +29,14 @@ export default function PreviewModal({ open, original, suggestion, onCancel, onC
           </div>
           <div>
             <div style={{ fontSize: 14, fontWeight: 700, color: '#2563eb', marginBottom: 6, letterSpacing: 1 }}>🤖 AI Suggestion</div>
-            <Card ai style={{ fontSize: 16, color: '#2563eb', background: 'linear-gradient(90deg, #e3f0ff 0%, #b2d8ff 100%)' }}>{suggestion || '(no suggestion)'}</Card>
+            <Card ai style={{ fontSize: 16, color: '#2563eb', background: 'linear-gradient(90deg, #e3f0ff 0%, #b2d8ff 100%)', position: 'relative' }}>
+              {loading ? (
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span style={{ width: 18, height: 18, border: '2px solid #2563eb', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }}></span>
+                  Generating suggestion…
+                </div>
+              ) : (suggestion || '(no suggestion)')}
+            </Card>
           </div>
         </Grid>
         <Row>
@@ -46,14 +54,14 @@ export default function PreviewModal({ open, original, suggestion, onCancel, onC
               setPerforming(false)
             }}
             style={{ background: '#111827', color: 'white', borderColor: '#111827', position: 'relative', fontWeight: 600, minWidth: 100 }}
-            disabled={performing}
+            disabled={performing || loading}
           >
             {performing ? (
               <span style={{ display: 'inline-flex', alignItems: 'center', gap: 6 }}>
                 <span style={{ width: 16, height: 16, border: '2px solid #2563eb', borderTop: '2px solid #fff', borderRadius: '50%', animation: 'spin 1s linear infinite', display: 'inline-block' }}></span>
                 Performing...
               </span>
-            ) : 'Confirm'}
+            ) : (loading ? 'Please wait…' : 'Confirm')}
           </Btn>
         </Row>
         <style>{`
