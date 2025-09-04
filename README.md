@@ -1,4 +1,4 @@
-# Local Ollama + React Editor
+# AI ChatBot + Editor
 
 - Minimal deps: **react**, **styled-components**, **express**, **vite**
 - No Tailwind, no heavy editor libs — uses a clean `contenteditable` div
